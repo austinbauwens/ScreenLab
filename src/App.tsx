@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useVideoPlayer } from './hooks/useVideoPlayer'
 import { Scene } from './components/Scene'
 import * as THREE from 'three'
@@ -25,7 +25,7 @@ function App() {
   } = useVideoPlayer()
 
   const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null)
-  const [movementSpeed, setMovementSpeed] = useState(5)
+  const [movementSpeed] = useState(5)
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null)
 
   useEffect(() => {
@@ -50,8 +50,11 @@ function App() {
       {videoUrl && (
         <video
           ref={(el) => {
-            videoRef.current = el
-            if (el) setVideoElement(el)
+            const ref = videoRef
+            if (el && ref.current !== el) {
+              ;(ref as any).current = el
+              setVideoElement(el)
+            }
           }}
           src={videoUrl}
           onTimeUpdate={updateTime}
@@ -90,8 +93,8 @@ function App() {
             fontSize: '12px',
             transition: 'all 0.2s ease',
           }}
-          onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
-          onMouseOut={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+          onMouseOver={(e) => {(e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.2)'}}
+          onMouseOut={(e) => {(e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.1)'}}
         >
           {controlsCollapsed ? '▼' : '▲'} Controls
         </button>

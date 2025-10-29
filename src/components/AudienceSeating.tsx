@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import * as THREE from 'three'
 import { createFabricBumpMap } from '../utils/textureUtils'
 
 function Chair({ position, rotation = 0 }: { position: [number, number, number], rotation?: number }) {

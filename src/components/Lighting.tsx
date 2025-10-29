@@ -6,7 +6,7 @@ interface CameraControlsProps {
 }
 
 export function CameraControls({ exposure = 1.0 }: CameraControlsProps) {
-  const { gl, camera } = useThree()
+  const { gl } = useThree()
 
   useEffect(() => {
     gl.shadowMap.enabled = true

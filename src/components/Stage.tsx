@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import * as THREE from 'three'
 import { createBumpMap, createWoodBumpMap } from '../utils/textureUtils'
 
 export function Stage() {

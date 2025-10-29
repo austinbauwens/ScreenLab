@@ -108,7 +108,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
     return () => clearInterval(interval)
   }, [videoTexture, videoElement])
 
-  useFrame((state) => {
+  useFrame(() => {
     if (lightRef.current && videoTexture) {
       lightRef.current.intensity = brightness * 20
     }
@@ -134,7 +134,6 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
         <boxGeometry args={[10, 5, 0.15]} />
         <meshBasicMaterial
           map={videoTexture}
-          colorSpace={THREE.SRGBColorSpace}
           toneMapped={false}
         />
       </mesh>
