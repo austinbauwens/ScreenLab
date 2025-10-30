@@ -27,6 +27,7 @@ function App() {
   const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null)
   const [movementSpeed] = useState(5)
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null)
+  const [focalLength, setFocalLength] = useState(50)
 
   useEffect(() => {
     if (videoRef.current && videoUrl) {
@@ -44,7 +45,7 @@ function App() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-        <Scene videoTexture={videoTexture} brightness={brightness} movementSpeed={movementSpeed} exposure={exposure} videoElement={videoElement} />
+        <Scene videoTexture={videoTexture} brightness={brightness} movementSpeed={movementSpeed} exposure={exposure} videoElement={videoElement} onFocalLengthChange={setFocalLength} />
       
       {/* Hidden video element */}
       {videoUrl && (
@@ -199,6 +200,15 @@ function App() {
             style={{ width: '100%', padding: '4px' }}
           />
         </div>
+
+        <div style={{ marginBottom: '15px' }}>
+          <div style={{ marginBottom: '5px' }}>
+            Focal Length: {focalLength.toFixed(0)}mm
+          </div>
+          <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: '5px' }}>
+            Use scroll wheel to adjust
+          </div>
+        </div>
           </>
         )}
 
@@ -207,6 +217,7 @@ function App() {
           WASD: Move<br />
           Q/E: Up/Down<br />
           Mouse: Look<br />
+          Scroll: Focal Length<br />
           Click to lock pointer
         </div>
           </>

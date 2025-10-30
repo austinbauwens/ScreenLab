@@ -13,9 +13,10 @@ interface SceneProps {
   movementSpeed: number
   exposure: number
   videoElement?: HTMLVideoElement | null
+  onFocalLengthChange?: (focalLength: number) => void
 }
 
-export function Scene({ videoTexture, brightness, movementSpeed, exposure, videoElement }: SceneProps) {
+export function Scene({ videoTexture, brightness, movementSpeed, exposure, videoElement, onFocalLengthChange }: SceneProps) {
   return (
     <Canvas
       shadows
@@ -29,7 +30,7 @@ export function Scene({ videoTexture, brightness, movementSpeed, exposure, video
       dpr={1}
     >
       <CameraControls exposure={exposure} key={exposure} />
-      <FPSControls speed={movementSpeed} />
+      <FPSControls speed={movementSpeed} onFocalLengthChange={onFocalLengthChange} />
       <AudienceSeating />
       <LEDScreen videoTexture={videoTexture} brightness={brightness} videoElement={videoElement} />
       <Stage />

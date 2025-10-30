@@ -4,12 +4,14 @@ import * as THREE from 'three'
 
 interface FPSControlsProps {
   speed?: number
+  onFocalLengthChange?: (focalLength: number) => void
 }
 
-export function FPSControls({ speed = 5 }: FPSControlsProps) {
+export function FPSControls({ speed = 5, onFocalLengthChange }: FPSControlsProps) {
   const { camera } = useThree()
   const keys = useRef<{ [key: string]: boolean }>({})
   const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
+  const focalLength = useRef(50) // Default focal length (50mm equivalent)
   const PI_2 = Math.PI / 2
 
   useEffect(() => {
@@ -40,16 +42,42 @@ export function FPSControls({ speed = 5 }: FPSControlsProps) {
       }
     }
 
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      
+      // Adjust focal length based on scroll direction
+      const delta = event.deltaY > 0 ? -5 : 5
+      focalLength.current = Math.max(10, Math.min(200, focalLength.current + delta))
+      
+      // Convert focal length to FOV (field of view)
+      // Using 35mm film sensor width as reference (36mm)
+      const sensorWidth = 36
+      const fov = 2 * Math.atan(sensorWidth / (2 * focalLength.current)) * (180 / Math.PI)
+      
+      // Update camera FOV
+      if (camera instanceof THREE.PerspectiveCamera) {
+        camera.fov = fov
+        camera.updateProjectionMatrix()
+      }
+      
+      // Notify parent component of focal length change
+      if (onFocalLengthChange) {
+        onFocalLengthChange(focalLength.current)
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('click', handleClick)
+    window.addEventListener('wheel', handleWheel, { passive: false })
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('click', handleClick)
+      window.removeEventListener('wheel', handleWheel)
     }
   }, [camera])
 
