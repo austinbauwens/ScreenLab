@@ -11,13 +11,11 @@ interface SceneProps {
   videoTexture: THREE.VideoTexture | null
   brightness: number
   movementSpeed: number
-  depthOfFieldFocus: number
   exposure: number
-  tiltShiftBlur: number
   videoElement?: HTMLVideoElement | null
 }
 
-export function Scene({ videoTexture, brightness, movementSpeed, depthOfFieldFocus, exposure, tiltShiftBlur, videoElement }: SceneProps) {
+export function Scene({ videoTexture, brightness, movementSpeed, exposure, videoElement }: SceneProps) {
   return (
     <Canvas
       shadows
