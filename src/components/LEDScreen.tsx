@@ -6,14 +6,24 @@ interface LEDScreenProps {
   videoTexture: THREE.VideoTexture | null
   brightness: number
   videoElement?: HTMLVideoElement | null
+  multiVideoMode?: boolean
+  videoTextures?: [THREE.VideoTexture | null, THREE.VideoTexture | null, THREE.VideoTexture | null]
+  videoElements?: [HTMLVideoElement | null, HTMLVideoElement | null, HTMLVideoElement | null]
+  lightIntensity?: number
 }
 
-export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenProps) {
+export function LEDScreen({ videoTexture, brightness, videoElement, multiVideoMode = false, videoTextures, videoElements, lightIntensity = 1.0 }: LEDScreenProps) {
   const meshRef = useRef<THREE.Mesh>(null)
+  const leftMeshRef = useRef<THREE.Mesh>(null)
+  const rightMeshRef = useRef<THREE.Mesh>(null)
   const lightRef = useRef<THREE.RectAreaLight>(null)
   const pointLightRefs = useRef<Array<THREE.PointLight>>([])
   
-  // Store previous colors for easing
+  // Store previous colors for easing (separate colors for each screen in multi-video mode)
+  const prevColorRefs = useRef<Array<THREE.Color>>([new THREE.Color(1, 1, 1), new THREE.Color(1, 1, 1), new THREE.Color(1, 1, 1)])
+  const targetColorRefs = useRef<Array<THREE.Color>>([new THREE.Color(1, 1, 1), new THREE.Color(1, 1, 1), new THREE.Color(1, 1, 1)])
+  
+  // For backward compatibility with single video mode
   const prevColorRef = useRef<THREE.Color>(new THREE.Color(1, 1, 1))
   const targetColorRef = useRef<THREE.Color>(new THREE.Color(1, 1, 1))
   
@@ -91,101 +101,137 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
     }
   }, [brightness, videoTexture, videoElement])
   
-  // Sample video texture periodically for color updates
-  useEffect(() => {
-    if (!videoTexture || !videoElement) return
-    
-    const updateTargetColor = () => {
-      const video = videoElement
-      if (video.videoWidth > 0 && video.videoHeight > 0) {
-        const sampleSize = 256 // Increased for better color accuracy
-        const canvas = document.createElement('canvas')
-        canvas.width = sampleSize
-        canvas.height = sampleSize
-        const ctx = canvas.getContext('2d')
-        
-        if (ctx) {
-          try {
-            ctx.drawImage(video, 0, 0, sampleSize, sampleSize)
-            const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize)
+  // Helper function to sample color from a video element
+  const sampleColorFromVideo = (video: HTMLVideoElement, targetColor: THREE.Color) => {
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      const sampleSize = 256
+      const canvas = document.createElement('canvas')
+      canvas.width = sampleSize
+      canvas.height = sampleSize
+      const ctx = canvas.getContext('2d')
+      
+      if (ctx) {
+        try {
+          ctx.drawImage(video, 0, 0, sampleSize, sampleSize)
+          const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize)
+          
+          const samplePoints = [
+            { x: 0.3, y: 0.3 }, { x: 0.5, y: 0.3 }, { x: 0.7, y: 0.3 },
+            { x: 0.3, y: 0.5 }, { x: 0.5, y: 0.5 }, { x: 0.7, y: 0.5 },
+            { x: 0.3, y: 0.7 }, { x: 0.5, y: 0.7 }, { x: 0.7, y: 0.7 },
+          ]
+          
+          let totalR = 0, totalG = 0, totalB = 0
+          
+          samplePoints.forEach(point => {
+            const px = Math.floor(point.x * sampleSize)
+            const py = Math.floor(point.y * sampleSize)
+            const index = (py * sampleSize + px) * 4
             
-            // Sample multiple points and average for better color representation
-            const samplePoints = [
-              { x: 0.3, y: 0.3 }, { x: 0.5, y: 0.3 }, { x: 0.7, y: 0.3 },
-              { x: 0.3, y: 0.5 }, { x: 0.5, y: 0.5 }, { x: 0.7, y: 0.5 },
-              { x: 0.3, y: 0.7 }, { x: 0.5, y: 0.7 }, { x: 0.7, y: 0.7 },
-            ]
-            
-            let totalR = 0, totalG = 0, totalB = 0
-            
-            samplePoints.forEach(point => {
-              const px = Math.floor(point.x * sampleSize)
-              const py = Math.floor(point.y * sampleSize)
-              const index = (py * sampleSize + px) * 4
-              
-              totalR += imageData.data[index] / 255
-              totalG += imageData.data[index + 1] / 255
-              totalB += imageData.data[index + 2] / 255
-            })
-            
-            const avgR = totalR / samplePoints.length
-            const avgG = totalG / samplePoints.length
-            const avgB = totalB / samplePoints.length
-            
-            // Boost saturation for more vibrant colors
-            const luminance = (avgR + avgG + avgB) / 3
-            const saturationBoost = 1.5
-            
-            const saturatedR = luminance + (avgR - luminance) * saturationBoost
-            const saturatedG = luminance + (avgG - luminance) * saturationBoost
-            const saturatedB = luminance + (avgB - luminance) * saturationBoost
-            
-            targetColorRef.current.setRGB(
-              Math.max(0, Math.min(1, saturatedR)),
-              Math.max(0, Math.min(1, saturatedG)),
-              Math.max(0, Math.min(1, saturatedB))
-            )
-          } catch (e) {
-            // Ignore CORS errors
-          }
+            totalR += imageData.data[index] / 255
+            totalG += imageData.data[index + 1] / 255
+            totalB += imageData.data[index + 2] / 255
+          })
+          
+          const avgR = totalR / samplePoints.length
+          const avgG = totalG / samplePoints.length
+          const avgB = totalB / samplePoints.length
+          
+          const luminance = (avgR + avgG + avgB) / 3
+          const saturationBoost = 1.5
+          
+          const saturatedR = luminance + (avgR - luminance) * saturationBoost
+          const saturatedG = luminance + (avgG - luminance) * saturationBoost
+          const saturatedB = luminance + (avgB - luminance) * saturationBoost
+          
+          targetColor.setRGB(
+            Math.max(0, Math.min(1, saturatedR)),
+            Math.max(0, Math.min(1, saturatedG)),
+            Math.max(0, Math.min(1, saturatedB))
+          )
+        } catch (e) {
+          // Ignore CORS errors
         }
       }
     }
-    
-    const interval = setInterval(updateTargetColor, 50) // Update every 50ms for more responsive colors
-    return () => clearInterval(interval)
-  }, [videoTexture, videoElement])
+  }
+  
+  // Sample video texture periodically for color updates
+  useEffect(() => {
+    if (multiVideoMode && videoElements) {
+      const updateTargetColors = () => {
+        videoElements.forEach((video, index) => {
+          if (video) {
+            sampleColorFromVideo(video, targetColorRefs.current[index])
+          }
+        })
+      }
+      
+      const interval = setInterval(updateTargetColors, 50)
+      return () => clearInterval(interval)
+    } else if (!multiVideoMode && videoTexture && videoElement) {
+      const updateTargetColor = () => {
+        sampleColorFromVideo(videoElement, targetColorRef.current)
+      }
+      
+      const interval = setInterval(updateTargetColor, 50)
+      return () => clearInterval(interval)
+    }
+  }, [videoTexture, videoElement, multiVideoMode, videoElements])
 
   useFrame(() => {
-    if (lightRef.current && videoTexture) {
-      lightRef.current.intensity = brightness * 20
+    const lerpSpeed = 0.1
+    
+    if (multiVideoMode) {
+      // In multi-video mode, each screen has its own color
+      prevColorRefs.current.forEach((prevColor, index) => {
+        prevColor.lerp(targetColorRefs.current[index], lerpSpeed)
+      })
+      
+      // Update point lights with respective colors
+      if (pointLightRefs.current[0]) pointLightRefs.current[0].color.copy(prevColorRefs.current[0])
+      if (pointLightRefs.current[1]) pointLightRefs.current[1].color.copy(prevColorRefs.current[1])
+      if (pointLightRefs.current[2]) pointLightRefs.current[2].color.copy(prevColorRefs.current[2])
+      
+      // Apply intensity to all lights
+      const intensity = brightness * 20 * lightIntensity
+      pointLightRefs.current.forEach((light) => {
+        if (light) light.intensity = intensity
+      })
+    } else {
+      // Single video mode - all lights use the same color
+      prevColorRef.current.lerp(targetColorRef.current, lerpSpeed)
+      
+      if (lightRef.current) {
+        lightRef.current.intensity = brightness * 20 * lightIntensity
+        lightRef.current.color.copy(prevColorRef.current)
+      }
+      
+      const intensity = brightness * 20 * lightIntensity
+      pointLightRefs.current.forEach((light) => {
+        if (light) {
+          light.intensity = intensity
+          light.color.copy(prevColorRef.current)
+        }
+      })
     }
-    
-    // Smoothly ease the light colors towards the target
-    const lerpSpeed = 0.1 // Faster transition for more responsive colors
-    prevColorRef.current.lerp(targetColorRef.current, lerpSpeed)
-    
-    // Update lights with eased color
-    if (lightRef.current) {
-      lightRef.current.color.copy(prevColorRef.current)
-    }
-    
-    pointLightRefs.current.forEach((light) => {
-      light.color.copy(prevColorRef.current)
-    })
   })
+
+  const leftTexture = multiVideoMode ? (videoTextures?.[0] || null) : videoTexture
+  const centerTexture = multiVideoMode ? (videoTextures?.[1] || null) : videoTexture
+  const rightTexture = multiVideoMode ? (videoTextures?.[2] || null) : videoTexture
 
   return (
     <group>
       {/* Left Screen */}
       <group position={[-(screenWidth + gapSize), 2.5, -6]}>
         {/* Screen face */}
-        <mesh key="left-screen">
+        <mesh ref={leftMeshRef} key="left-screen">
           <planeGeometry args={[screenWidth, screenHeight]} />
           <meshBasicMaterial
-            map={videoTexture}
+            map={leftTexture}
             toneMapped={false}
-            key={videoTexture ? 'has-texture' : 'no-texture'}
+            key={leftTexture ? 'has-texture' : 'no-texture'}
           />
         </mesh>
         {/* Frame */}
@@ -201,9 +247,9 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
         <mesh ref={meshRef} key="center-screen">
           <planeGeometry args={[screenWidth, screenHeight]} />
           <meshBasicMaterial
-            map={videoTexture}
+            map={centerTexture}
             toneMapped={false}
-            key={videoTexture ? 'has-texture' : 'no-texture'}
+            key={centerTexture ? 'has-texture' : 'no-texture'}
           />
         </mesh>
         {/* Frame */}
@@ -216,12 +262,12 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
       {/* Right Screen */}
       <group position={[screenWidth + gapSize, 2.5, -6]}>
         {/* Screen face */}
-        <mesh key="right-screen">
+        <mesh ref={rightMeshRef} key="right-screen">
           <planeGeometry args={[screenWidth, screenHeight]} />
           <meshBasicMaterial
-            map={videoTexture}
+            map={rightTexture}
             toneMapped={false}
-            key={videoTexture ? 'has-texture' : 'no-texture'}
+            key={rightTexture ? 'has-texture' : 'no-texture'}
           />
         </mesh>
         {/* Frame */}

@@ -13,6 +13,8 @@ export function FPSControls({ speed = 5, onFocalLengthChange }: FPSControlsProps
   const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
   const focalLength = useRef(50) // Default focal length (50mm equivalent)
   const PI_2 = Math.PI / 2
+  const velocity = useRef(new THREE.Vector3(0, 0, 0))
+  const smoothFactor = 15.0 // Higher = smoother but less responsive
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -82,34 +84,37 @@ export function FPSControls({ speed = 5, onFocalLengthChange }: FPSControlsProps
   }, [camera])
 
   useFrame((_, delta) => {
-    // Simplified movement calculation
-    const moveSpeed = 2 * delta * speed
-    const moveVector = new THREE.Vector3()
+    // Target velocity based on input
+    const targetVelocity = new THREE.Vector3()
 
     if (keys.current['keyw']) {
-      moveVector.z -= moveSpeed
+      targetVelocity.z -= speed
     }
     if (keys.current['keys']) {
-      moveVector.z += moveSpeed
+      targetVelocity.z += speed
     }
     if (keys.current['keya']) {
-      moveVector.x -= moveSpeed
+      targetVelocity.x -= speed
     }
     if (keys.current['keyd']) {
-      moveVector.x += moveSpeed
+      targetVelocity.x += speed
     }
     if (keys.current['keyq']) {
-      moveVector.y += moveSpeed
+      targetVelocity.y += speed
     }
     if (keys.current['keye']) {
-      moveVector.y -= moveSpeed
+      targetVelocity.y -= speed
     }
 
     // Apply camera rotation to movement direction
-    moveVector.applyQuaternion(camera.quaternion)
-    moveVector.y = moveVector.y // Don't apply vertical rotation to Y movement
+    targetVelocity.applyQuaternion(camera.quaternion)
+    targetVelocity.y = targetVelocity.y // Don't apply vertical rotation to Y movement
     
-    camera.position.add(moveVector)
+    // Smooth velocity interpolation
+    velocity.current.lerp(targetVelocity, smoothFactor * delta)
+    
+    // Apply velocity to position
+    camera.position.add(velocity.current.clone().multiplyScalar(delta))
   })
 
   return null

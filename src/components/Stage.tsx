@@ -9,7 +9,7 @@ export function Stage() {
     <group>
       {/* Main Stage Platform */}
       <mesh position={[0, 0.15, -5.5]} castShadow receiveShadow>
-        <boxGeometry args={[12, 0.3, 3]} />
+        <boxGeometry args={[18, 0.3, 5]} />
         <meshPhysicalMaterial
           color="#2a2a2a"
           roughness={0.3}
@@ -20,8 +20,8 @@ export function Stage() {
       </mesh>
 
       {/* Beveled front edge */}
-      <mesh position={[0, 0.3, -4.25]} castShadow receiveShadow>
-        <boxGeometry args={[12, 0.08, 0.1]} />
+      <mesh position={[0, 0.3, -3.25]} castShadow receiveShadow>
+        <boxGeometry args={[18, 0.08, 0.1]} />
         <meshPhysicalMaterial 
           color="#1a1a1a" 
           roughness={0.2} 

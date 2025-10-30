@@ -107,3 +107,4 @@ export function createFabricBumpMap(size: number = 256): THREE.Texture {
 }
 
 
+
