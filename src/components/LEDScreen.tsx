@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
@@ -16,12 +16,60 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
   // Store previous colors for easing
   const prevColorRef = useRef<THREE.Color>(new THREE.Color(1, 1, 1))
   const targetColorRef = useRef<THREE.Color>(new THREE.Color(1, 1, 1))
+  
+  // Calculate screen dimensions based on video aspect ratio
+  const [screenWidth, setScreenWidth] = useState(10)
+  const [screenHeight, setScreenHeight] = useState(5)
+  const [gapSize, setGapSize] = useState(1)
 
   useEffect(() => {
+    // Update screen dimensions based on video aspect ratio
+    if (videoElement) {
+      const updateDimensions = () => {
+        if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+          const aspectRatio = videoElement.videoWidth / videoElement.videoHeight
+          
+          // Keep a fixed height (5) and adjust width based on aspect ratio
+          const targetHeight = 5
+          const targetWidth = targetHeight * aspectRatio
+          
+          console.log('Video dimensions:', videoElement.videoWidth, 'x', videoElement.videoHeight)
+          console.log('Setting screen to:', targetWidth, 'x', targetHeight)
+          
+          setScreenWidth(targetWidth)
+          setScreenHeight(targetHeight)
+          
+          // If wider than 16:9, increase gap between screens
+          const sixteenNineAspectRatio = 16/9
+          if (aspectRatio > sixteenNineAspectRatio) {
+            // Increase gap based on how much wider than 16:9
+            const extraWidth = targetWidth - (targetHeight * sixteenNineAspectRatio)
+            setGapSize(1 + extraWidth * 0.3) // Scale the extra width for gap
+          } else {
+            setGapSize(1)
+          }
+          
+          // Update light dimensions to match
+          if (lightRef.current) {
+            lightRef.current.width = targetWidth
+            lightRef.current.height = targetHeight
+          }
+        }
+      }
+      
+      // Try to get dimensions immediately
+      updateDimensions()
+      
+      // Also listen for loadedmetadata event in case video dimensions aren't available yet
+      videoElement.addEventListener('loadedmetadata', updateDimensions)
+      
+      return () => {
+        videoElement.removeEventListener('loadedmetadata', updateDimensions)
+      }
+    }
+    
     if (lightRef.current && videoTexture) {
       lightRef.current.intensity = brightness * 8
-      lightRef.current.width = 10
-      lightRef.current.height = 5
     }
     
     // Configure video texture for better color quality
@@ -41,7 +89,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
       material.map = videoTexture
       material.needsUpdate = true
     }
-  }, [brightness, videoTexture])
+  }, [brightness, videoTexture, videoElement])
   
   // Sample video texture periodically for color updates
   useEffect(() => {
@@ -128,24 +176,69 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
   })
 
   return (
-    <group position={[0, 2.5, -6]}>
-      {/* LED Screen */}
-      <mesh ref={meshRef}>
-        <boxGeometry args={[10, 5, 0.15]} />
-        <meshBasicMaterial
-          map={videoTexture}
-          toneMapped={false}
-        />
-      </mesh>
+    <group>
+      {/* Left Screen */}
+      <group position={[-(screenWidth + gapSize), 2.5, -6]}>
+        {/* Screen face */}
+        <mesh key="left-screen">
+          <planeGeometry args={[screenWidth, screenHeight]} />
+          <meshBasicMaterial
+            map={videoTexture}
+            toneMapped={false}
+            key={videoTexture ? 'has-texture' : 'no-texture'}
+          />
+        </mesh>
+        {/* Frame */}
+        <mesh position={[0, 0, -0.08]}>
+          <boxGeometry args={[screenWidth + 0.2, screenHeight + 0.2, 0.05]} />
+          <meshPhysicalMaterial color="#1a1a1a" roughness={0.9} metalness={0.1} />
+        </mesh>
+      </group>
+      
+      {/* Center LED Screen */}
+      <group position={[0, 2.5, -6]}>
+        {/* Screen face */}
+        <mesh ref={meshRef} key="center-screen">
+          <planeGeometry args={[screenWidth, screenHeight]} />
+          <meshBasicMaterial
+            map={videoTexture}
+            toneMapped={false}
+            key={videoTexture ? 'has-texture' : 'no-texture'}
+          />
+        </mesh>
+        {/* Frame */}
+        <mesh position={[0, 0, -0.08]}>
+          <boxGeometry args={[screenWidth + 0.2, screenHeight + 0.2, 0.05]} />
+          <meshPhysicalMaterial color="#1a1a1a" roughness={0.9} metalness={0.1} />
+        </mesh>
+      </group>
+      
+      {/* Right Screen */}
+      <group position={[screenWidth + gapSize, 2.5, -6]}>
+        {/* Screen face */}
+        <mesh key="right-screen">
+          <planeGeometry args={[screenWidth, screenHeight]} />
+          <meshBasicMaterial
+            map={videoTexture}
+            toneMapped={false}
+            key={videoTexture ? 'has-texture' : 'no-texture'}
+          />
+        </mesh>
+        {/* Frame */}
+        <mesh position={[0, 0, -0.08]}>
+          <boxGeometry args={[screenWidth + 0.2, screenHeight + 0.2, 0.05]} />
+          <meshPhysicalMaterial color="#1a1a1a" roughness={0.9} metalness={0.1} />
+        </mesh>
+      </group>
 
-      {/* RectAreaLight for environment lighting from the screen */}
+      {/* RectAreaLight for environment lighting from the center screen */}
       {videoTexture && (
         <rectAreaLight
           ref={lightRef}
-          args={['#ffffff', brightness * 20, 10, 5]}
-          position={[0, 0, 0.1]}
-          width={10}
-          height={5}
+          args={['#ffffff', brightness * 20, screenWidth, screenHeight]}
+          position={[0, 2.5, -5.9]}
+          width={screenWidth}
+          height={screenHeight}
         />
       )}
       
@@ -154,7 +247,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
         <>
           <pointLight
             ref={(ref) => { if (ref) pointLightRefs.current[0] = ref }}
-            position={[-3, 0, -0.5]}
+            position={[-3 - screenWidth - gapSize, 2.5, -5.9]}
             intensity={brightness * 10}
             distance={30}
             decay={1.2}
@@ -162,7 +255,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
           />
           <pointLight
             ref={(ref) => { if (ref) pointLightRefs.current[1] = ref }}
-            position={[0, 0, -0.5]}
+            position={[0, 2.5, -5.9]}
             intensity={brightness * 12}
             distance={30}
             decay={1.2}
@@ -170,7 +263,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
           />
           <pointLight
             ref={(ref) => { if (ref) pointLightRefs.current[2] = ref }}
-            position={[3, 0, -0.5]}
+            position={[3 + screenWidth + gapSize, 2.5, -5.9]}
             intensity={brightness * 10}
             distance={30}
             decay={1.2}
@@ -179,7 +272,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
           {/* Additional downward-facing lights to hit chairs and floor */}
           <pointLight
             ref={(ref) => { if (ref) pointLightRefs.current[3] = ref }}
-            position={[-3, 1.5, -0.5]}
+            position={[-3 - screenWidth - gapSize, 4, -5.9]}
             intensity={brightness * 8}
             distance={25}
             decay={1.3}
@@ -187,7 +280,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
           />
           <pointLight
             ref={(ref) => { if (ref) pointLightRefs.current[4] = ref }}
-            position={[0, 1.5, -0.5]}
+            position={[0, 4, -5.9]}
             intensity={brightness * 10}
             distance={25}
             decay={1.3}
@@ -195,7 +288,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
           />
           <pointLight
             ref={(ref) => { if (ref) pointLightRefs.current[5] = ref }}
-            position={[3, 1.5, -0.5]}
+            position={[3 + screenWidth + gapSize, 4, -5.9]}
             intensity={brightness * 8}
             distance={25}
             decay={1.3}
@@ -203,30 +296,6 @@ export function LEDScreen({ videoTexture, brightness, videoElement }: LEDScreenP
           />
         </>
       )}
-
-      {/* Screen Frame with bevel */}
-      <mesh position={[0, 0, -0.08]}>
-        <boxGeometry args={[10.2, 5.2, 0.05]} />
-        <meshPhysicalMaterial color="#1a1a1a" roughness={0.9} metalness={0.1} />
-      </mesh>
-      
-      {/* Beveled frame edges */}
-      <mesh position={[-5.05, 0, 0]}>
-        <boxGeometry args={[0.1, 5.4, 0.1]} />
-        <meshPhysicalMaterial color="#0a0a0a" roughness={0.9} metalness={0.2} />
-      </mesh>
-      <mesh position={[5.05, 0, 0]}>
-        <boxGeometry args={[0.1, 5.4, 0.1]} />
-        <meshPhysicalMaterial color="#0a0a0a" roughness={0.9} metalness={0.2} />
-      </mesh>
-      <mesh position={[0, 2.6, 0]}>
-        <boxGeometry args={[10.2, 0.1, 0.1]} />
-        <meshPhysicalMaterial color="#0a0a0a" roughness={0.9} metalness={0.2} />
-      </mesh>
-      <mesh position={[0, -2.6, 0]}>
-        <boxGeometry args={[10.2, 0.1, 0.1]} />
-        <meshPhysicalMaterial color="#0a0a0a" roughness={0.9} metalness={0.2} />
-      </mesh>
     </group>
   )
 }

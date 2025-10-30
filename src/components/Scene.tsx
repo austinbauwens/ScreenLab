@@ -4,7 +4,6 @@ import { AudienceSeating } from './AudienceSeating'
 import { LEDScreen } from './LEDScreen'
 import { Stage } from './Stage'
 import { RoomEnvironment } from './RoomEnvironment'
-import { PostProcessing } from './PostProcessing'
 import { FPSControls } from './FPSControls'
 import * as THREE from 'three'
 
@@ -14,10 +13,11 @@ interface SceneProps {
   movementSpeed: number
   depthOfFieldFocus: number
   exposure: number
+  tiltShiftBlur: number
   videoElement?: HTMLVideoElement | null
 }
 
-export function Scene({ videoTexture, brightness, movementSpeed, depthOfFieldFocus, exposure, videoElement }: SceneProps) {
+export function Scene({ videoTexture, brightness, movementSpeed, depthOfFieldFocus, exposure, tiltShiftBlur, videoElement }: SceneProps) {
   return (
     <Canvas
       shadows
@@ -36,7 +36,6 @@ export function Scene({ videoTexture, brightness, movementSpeed, depthOfFieldFoc
       <LEDScreen videoTexture={videoTexture} brightness={brightness} videoElement={videoElement} />
       <Stage />
       <RoomEnvironment />
-      <PostProcessing depthOfFieldFocus={depthOfFieldFocus} />
     </Canvas>
   )
 }

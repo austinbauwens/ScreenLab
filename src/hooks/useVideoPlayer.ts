@@ -9,10 +9,11 @@ export interface VideoPlayerState {
   brightness: number
   saturation: number
   contrast: number
-  gamma: number
-  depthOfFieldFocus: number
-  exposure: number
-  controlsCollapsed: boolean
+    gamma: number
+    depthOfFieldFocus: number
+    exposure: number
+    controlsCollapsed: boolean
+    tiltShiftBlur: number
 }
 
 export const useVideoPlayer = () => {
@@ -29,6 +30,7 @@ export const useVideoPlayer = () => {
     depthOfFieldFocus: 14.3,
     exposure: 1.0,
     controlsCollapsed: false,
+    tiltShiftBlur: 5,
   })
 
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -91,6 +93,10 @@ export const useVideoPlayer = () => {
     setState(prev => ({ ...prev, controlsCollapsed: !prev.controlsCollapsed }))
   }, [])
 
+  const setTiltShiftBlur = useCallback((tiltShiftBlur: number) => {
+    setState(prev => ({ ...prev, tiltShiftBlur }))
+  }, [])
+
   const updateTime = useCallback(() => {
     const video = videoRef.current
     if (video) {
@@ -113,6 +119,7 @@ export const useVideoPlayer = () => {
     setDepthOfFieldFocus,
     setExposure,
     toggleControlsCollapsed,
+    setTiltShiftBlur,
     updateTime,
   }
 }

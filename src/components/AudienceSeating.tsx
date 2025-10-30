@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { RoundedBox } from '@react-three/drei'
 import { createFabricBumpMap } from '../utils/textureUtils'
 
 function Chair({ position, rotation = 0 }: { position: [number, number, number], rotation?: number }) {
@@ -6,9 +7,8 @@ function Chair({ position, rotation = 0 }: { position: [number, number, number],
   
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      {/* Chair Seat - with beveled edges */}
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[0.4, 0.05, 0.4]} />
+      {/* Chair Seat - with rounded edges */}
+      <RoundedBox args={[0.4, 0.05, 0.4]} radius={0.02} castShadow receiveShadow>
         <meshPhysicalMaterial 
           color="#1a1a1a" 
           roughness={0.6} 
@@ -16,22 +16,10 @@ function Chair({ position, rotation = 0 }: { position: [number, number, number],
           bumpMap={fabricBumpMap}
           bumpScale={0.02}
         />
-      </mesh>
-      {/* Bevel on seat edges */}
-      <mesh position={[0, 0.03, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.42, 0.02, 0.02]} />
-        <meshPhysicalMaterial 
-          color="#0f0f0f" 
-          roughness={0.4} 
-          metalness={0.2}
-          bumpMap={fabricBumpMap}
-          bumpScale={0.01}
-        />
-      </mesh>
+      </RoundedBox>
       
-      {/* Chair Back - with beveled edges */}
-      <mesh position={[0, 0.25, -0.15]} castShadow receiveShadow>
-        <boxGeometry args={[0.4, 0.5, 0.05]} />
+      {/* Chair Back - with rounded edges */}
+      <RoundedBox args={[0.4, 0.5, 0.05]} radius={0.02} position={[0, 0.25, -0.15]} castShadow receiveShadow>
         <meshPhysicalMaterial 
           color="#1a1a1a" 
           roughness={0.6} 
@@ -39,18 +27,7 @@ function Chair({ position, rotation = 0 }: { position: [number, number, number],
           bumpMap={fabricBumpMap}
           bumpScale={0.02}
         />
-      </mesh>
-      {/* Bevel on back edges */}
-      <mesh position={[0, 0.25, -0.12]} castShadow receiveShadow>
-        <boxGeometry args={[0.42, 0.52, 0.02]} />
-        <meshPhysicalMaterial 
-          color="#0f0f0f" 
-          roughness={0.4} 
-          metalness={0.2}
-          bumpMap={fabricBumpMap}
-          bumpScale={0.01}
-        />
-      </mesh>
+      </RoundedBox>
       
       {/* Chair Legs - more refined */}
       <mesh position={[-0.15, -0.15, -0.15]} castShadow receiveShadow>
@@ -128,7 +105,7 @@ export function AudienceSeating() {
   return (
     <group>
       {positions.map((pos, idx) => (
-        <Chair key={idx} position={pos} rotation={0} />
+        <Chair key={idx} position={pos} rotation={Math.PI} />
       ))}
     </group>
   )

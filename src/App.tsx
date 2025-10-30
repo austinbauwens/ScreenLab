@@ -13,6 +13,7 @@ function App() {
     depthOfFieldFocus,
     exposure,
     controlsCollapsed,
+    tiltShiftBlur,
     videoRef,
     loadVideo,
     togglePlayPause,
@@ -21,6 +22,7 @@ function App() {
     setDepthOfFieldFocus,
     setExposure,
     toggleControlsCollapsed,
+    setTiltShiftBlur,
     updateTime,
   } = useVideoPlayer()
 
@@ -44,7 +46,7 @@ function App() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-        <Scene videoTexture={videoTexture} brightness={brightness} movementSpeed={movementSpeed} depthOfFieldFocus={depthOfFieldFocus} exposure={exposure} videoElement={videoElement} />
+        <Scene videoTexture={videoTexture} brightness={brightness} movementSpeed={movementSpeed} depthOfFieldFocus={depthOfFieldFocus} exposure={exposure} tiltShiftBlur={tiltShiftBlur} videoElement={videoElement} />
       
       {/* Hidden video element */}
       {videoUrl && (
