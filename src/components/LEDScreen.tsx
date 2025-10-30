@@ -28,13 +28,50 @@ export function LEDScreen({ videoTexture, brightness, videoElement, multiVideoMo
   const targetColorRef = useRef<THREE.Color>(new THREE.Color(1, 1, 1))
   
   // Calculate screen dimensions based on video aspect ratio
-  const [screenWidth, setScreenWidth] = useState(10)
+  const [screenWidth, setScreenWidth] = useState(10) // For single video mode
   const [screenHeight, setScreenHeight] = useState(5)
   const [gapSize, setGapSize] = useState(1)
+  // For multi-video mode: separate widths for each screen
+  const [screenWidths, setScreenWidths] = useState<[number, number, number]>([10, 10, 10])
 
   useEffect(() => {
     // Update screen dimensions based on video aspect ratio
-    if (videoElement) {
+    if (multiVideoMode && videoElements) {
+      const updateDimensionsForAll = () => {
+        const newWidths: [number, number, number] = [10, 10, 10]
+        const targetHeight = 5
+        
+        videoElements.forEach((video, index) => {
+          if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+            const aspectRatio = video.videoWidth / video.videoHeight
+            const targetWidth = targetHeight * aspectRatio
+            newWidths[index] = targetWidth
+            
+            console.log(`Screen ${index} dimensions:`, video.videoWidth, 'x', video.videoHeight)
+            console.log(`Setting screen ${index} to:`, targetWidth, 'x', targetHeight)
+          }
+        })
+        
+        setScreenWidths(newWidths)
+        setScreenHeight(targetHeight)
+      }
+      
+      // Try to get dimensions immediately
+      updateDimensionsForAll()
+      
+      // Listen for loadedmetadata events on all videos
+      const cleanupFunctions: Array<() => void> = []
+      videoElements.forEach((video) => {
+        if (video) {
+          video.addEventListener('loadedmetadata', updateDimensionsForAll)
+          cleanupFunctions.push(() => video.removeEventListener('loadedmetadata', updateDimensionsForAll))
+        }
+      })
+      
+      return () => {
+        cleanupFunctions.forEach(cleanup => cleanup())
+      }
+    } else if (!multiVideoMode && videoElement) {
       const updateDimensions = () => {
         if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
           const aspectRatio = videoElement.videoWidth / videoElement.videoHeight
@@ -99,7 +136,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement, multiVideoMo
       material.map = videoTexture
       material.needsUpdate = true
     }
-  }, [brightness, videoTexture, videoElement])
+  }, [brightness, videoTexture, videoElement, multiVideoMode, videoElements])
   
   // Helper function to sample color from a video element
   const sampleColorFromVideo = (video: HTMLVideoElement, targetColor: THREE.Color) => {
@@ -220,14 +257,23 @@ export function LEDScreen({ videoTexture, brightness, videoElement, multiVideoMo
   const leftTexture = multiVideoMode ? (videoTextures?.[0] || null) : videoTexture
   const centerTexture = multiVideoMode ? (videoTextures?.[1] || null) : videoTexture
   const rightTexture = multiVideoMode ? (videoTextures?.[2] || null) : videoTexture
+  
+  // Determine widths to use for each screen
+  const leftWidth = multiVideoMode ? screenWidths[0] : screenWidth
+  const centerWidth = multiVideoMode ? screenWidths[1] : screenWidth
+  const rightWidth = multiVideoMode ? screenWidths[2] : screenWidth
+  
+  // Calculate positions for multi-video mode with different screen widths
+  const leftPosition = multiVideoMode ? -(centerWidth / 2 + leftWidth / 2 + gapSize) : -(screenWidth + gapSize)
+  const rightPosition = multiVideoMode ? (centerWidth / 2 + rightWidth / 2 + gapSize) : (screenWidth + gapSize)
 
   return (
     <group>
       {/* Left Screen */}
-      <group position={[-(screenWidth + gapSize), 2.5, -6]}>
+      <group position={[leftPosition, 2.5, -6]}>
         {/* Screen face */}
         <mesh ref={leftMeshRef} key="left-screen">
-          <planeGeometry args={[screenWidth, screenHeight]} />
+          <planeGeometry args={[leftWidth, screenHeight]} />
           <meshBasicMaterial
             map={leftTexture}
             toneMapped={false}
@@ -236,7 +282,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement, multiVideoMo
         </mesh>
         {/* Frame */}
         <mesh position={[0, 0, -0.08]}>
-          <boxGeometry args={[screenWidth + 0.2, screenHeight + 0.2, 0.05]} />
+          <boxGeometry args={[leftWidth + 0.2, screenHeight + 0.2, 0.05]} />
           <meshPhysicalMaterial color="#1a1a1a" roughness={0.9} metalness={0.1} />
         </mesh>
       </group>
@@ -245,7 +291,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement, multiVideoMo
       <group position={[0, 2.5, -6]}>
         {/* Screen face */}
         <mesh ref={meshRef} key="center-screen">
-          <planeGeometry args={[screenWidth, screenHeight]} />
+          <planeGeometry args={[centerWidth, screenHeight]} />
           <meshBasicMaterial
             map={centerTexture}
             toneMapped={false}
@@ -254,16 +300,16 @@ export function LEDScreen({ videoTexture, brightness, videoElement, multiVideoMo
         </mesh>
         {/* Frame */}
         <mesh position={[0, 0, -0.08]}>
-          <boxGeometry args={[screenWidth + 0.2, screenHeight + 0.2, 0.05]} />
+          <boxGeometry args={[centerWidth + 0.2, screenHeight + 0.2, 0.05]} />
           <meshPhysicalMaterial color="#1a1a1a" roughness={0.9} metalness={0.1} />
         </mesh>
       </group>
       
       {/* Right Screen */}
-      <group position={[screenWidth + gapSize, 2.5, -6]}>
+      <group position={[rightPosition, 2.5, -6]}>
         {/* Screen face */}
         <mesh ref={rightMeshRef} key="right-screen">
-          <planeGeometry args={[screenWidth, screenHeight]} />
+          <planeGeometry args={[rightWidth, screenHeight]} />
           <meshBasicMaterial
             map={rightTexture}
             toneMapped={false}
@@ -272,7 +318,7 @@ export function LEDScreen({ videoTexture, brightness, videoElement, multiVideoMo
         </mesh>
         {/* Frame */}
         <mesh position={[0, 0, -0.08]}>
-          <boxGeometry args={[screenWidth + 0.2, screenHeight + 0.2, 0.05]} />
+          <boxGeometry args={[rightWidth + 0.2, screenHeight + 0.2, 0.05]} />
           <meshPhysicalMaterial color="#1a1a1a" roughness={0.9} metalness={0.1} />
         </mesh>
       </group>
